@@ -3,7 +3,7 @@ import json
 import pytest
 
 def test_count_flights():
-    response = requests.get("http://127.0.0.1:5000/planes/count_flights")
+    response = requests.get("http://127.0.0.1:5000/planes/count_flights/1745952031")
     assert response.status_code == 200
 
     data = response.json()
@@ -18,12 +18,12 @@ def test_count_flights():
 
 def test_create_jobs():
     job = {"min_altitude": 10000, "max_altitude": 40000}
-    response = requests.post(f"http://127.0.0.1:5000/jobs", json=job)
+    response = requests.post(f"http://127.0.0.1:5000/jobs/1745952031", json=job)
     assert response.status_code == 200
     assert response.json()["message"] == "job successfully created"
 
     job = {"min_altitude": 10000}
-    response = requests.post(f"http://127.0.0.1:5000/jobs", json=job)
+    response = requests.post(f"http://127.0.0.1:5000/jobs/1745952031", json=job)
     assert response.status_code == 400
     assert "Missing required parameters" in response.json()["error"]
 
@@ -52,7 +52,7 @@ def test_get_results_dat():
     response = requests.get(f"http://127.0.0.1:5000/results-dat/{response.json()['id']}")
     assert response.status_code == 200
 
-def test_get_results_image():
+def test_get_results_img():
     response = requests.get(f"http://127.0.0.1:5000/results-img/fake_id")
     assert response.status_code == 404
     assert "job id not found" in response.json()["error"]
