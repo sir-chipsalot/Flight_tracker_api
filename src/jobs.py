@@ -27,15 +27,16 @@ def _generate_jid():
     """
     return str(uuid.uuid4())
 
-def _instantiate_job(jid, status, min_altitude, max_altitude):
+def _instantiate_job(jid, status, min_altitude, max_altitude, hour):
     """
     Create the job object description as a python dictionary. Requires the job id,
-    status, min_altitude, max_altitude parameters as well a null space for result.
+    status, min_altitude, max_altitude, and hour parameters as well a null space for result.
     """
     return {'id': jid,
             'status': status,
             'min_altitude': min_altitude,
             'max_altitude': max_altitude,
+            'hour': hour,
             'result': None}
 
 def _save_job(jid, job_dict):
@@ -48,7 +49,7 @@ def _queue_job(jid):
     q.put(jid)
     return
 
-def add_job(min_altitude, max_altitude, status="submitted"):
+def add_job(min_altitude, max_altitude, hour, status="submitted"):
     """Add a job to the redis queue."""
     if min_altitude is None:
         logging.error("Minimum Altitude is None")
@@ -56,8 +57,11 @@ def add_job(min_altitude, max_altitude, status="submitted"):
     if max_altitude is None:
         logging.error("Maximum Altitude is None")
         return False
+    if hour is None:
+        logging.error("Hour is None")
+        return False
     jid = _generate_jid()
-    job_dict = _instantiate_job(jid, status, min_altitude, max_altitude)
+    job_dict = _instantiate_job(jid, status, min_altitude, max_altitude, hour)
     _save_job(jid, job_dict)
     logging.info(f"Job id for created task: {jid}")
     _queue_job(jid)
