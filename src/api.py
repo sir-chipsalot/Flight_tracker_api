@@ -21,8 +21,8 @@ jdb = redis.Redis(host=redis_host, port=6379, db=2, decode_responses=True)
 results = redis.Redis(host=redis_host, port=6379, db=3, decode_responses=True)
 times_db = redis.Redis(host=redis_host, port=6379, db=4, decode_responses=True)
 
-
 fly_url = "https://opensky-network.org/api/states/all"
+
 
 def get_flight_records() -> Dict[str, List]:
     """
@@ -42,6 +42,7 @@ def get_flight_records() -> Dict[str, List]:
     except Exception as e:
         logging.error(f"Error fetching flight records: {e}")
         return []
+
 
 @app.route('/data', methods=['POST'])
 def load_data() -> Dict[str, str]:
@@ -99,8 +100,8 @@ def load_data() -> Dict[str, str]:
 
                 flight_list.append(flight_data)
                 redis_client.set(flight_key, json.dumps(flight_data))
-                
-                redis_client.set(flight, json.dumps(flight_data)
+
+                redis_client.set(flight_key, json.dumps(flight_data))
 
                 logging.debug(f"Stored flight {icao24} at {timestamp} in Redis.")
 
@@ -120,15 +121,16 @@ def load_data() -> Dict[str, str]:
         logging.error(f"Error in load_data: {e}")
         return {'error': f'An unexpected error occurred: {str(e)}'}
 
+
 @app.route('/flights_by_hour/<country>/<int:hour>', methods=['GET'])
 def flights_by_hour(country: str, hour: int):
     """
     Get the number of flights from a specific country during a specific hour.
-    
+
     Args:
         country (str): The country name (origin_country).
         hour (int): The Unix timestamp (start of the hour in UTC).
-    
+
     Example call:
         /flights_by_hour/United States/1745952031
     """
@@ -137,27 +139,41 @@ def flights_by_hour(country: str, hour: int):
     data = json.loads(redis_client.get(str(hour)))
     logging.info(f"This is how the data looks: {data}")
     if not data:
-        return jsonify ({'error': 'The given time does not exist in the database, check the /time method to find all the times'})
+        return jsonify(
+            {'error': 'The given time does not exist in the database, check the /time method to find all the times'})
 
-    for i in range (len(data)):
+    for i in range(len(data)):
         if (data[i].get("origin_country") == country):
-            count+=1
+            count += 1
 
-    return jsonify ({'message': 'all the data has been counted',
+    return jsonify({'message': 'all the data has been counted',
                     f'total number of flights that left from {country}': count})
+
 
 @app.route('/time', methods=['GET'])
 def get_list_of_times():
+    """
+    gets all timestamps that the redis container has
+    Returns: json of message of result and list of times
+    """
+
     data = list(times_db.smembers("times_set"))
     return jsonify({'message': 'The ese are the list of times you can choose from',
-           'times': data})
+                    'times': data})
+
 
 @app.route('/avg_velocity_of_flight_between_times/<flight>/<time1>/<time2>', methods=['GET'])
 def avg_velocity(flight: str, time1: str, time2: str):
-     
+    """
+    Compute the average velocity of a flight between two timestamps.
+    :param flight: icao24 flight name
+    :param time1: starting timestamp
+    :param time2: ending timestamp
+    :return: avg_velocity of flight between times
+    """
+    
     flight_key1 = f"flight:{flight}:{time1}"
     flight_key2 = f"flight:{flight}:{time2}"
-    
 
     raw_data1 = redis_client.get(flight_key1)
     raw_data2 = redis_client.get(flight_key2)
@@ -165,10 +181,6 @@ def avg_velocity(flight: str, time1: str, time2: str):
     if raw_data1 is None or raw_data2 is None:
         logging.error(f"Missing data: {flight_key1} or {flight_key2}")
         return {"error": "One or both keys are missing in Redis"}, 404
-
-
-
-
 
     data1 = json.loads(redis_client.get(flight_key1))
     data2 = json.loads(redis_client.get(flight_key2))
@@ -179,18 +191,24 @@ def avg_velocity(flight: str, time1: str, time2: str):
 
     return (data1)
 
-    
 
-@app.route('/planes/count_flights', methods=['GET'])
-def count_flights():
+@app.route('/planes/count_flights/<hour>', methods=['GET'])
+def count_flights(hour: str):
     """
-    Determines the number of planes currently in flight, on ground, and unknown
+    Determines the number of planes in flight, on ground, and unknown at the given hour
+    :param hour: The Unix timestamp (start of the hour in UTC).
+    :return: Number of planes in flight, on ground, and unknown at the given hour.
     """
+
     airborne = 0
     on_ground = 0
     unknown = 0
-    plane_data = redis_client.get("states")
-    for plane in plane_data:
+    data = json.loads(redis_client.get(str(hour)))
+    if not data:
+        return jsonify(
+            {'error': 'The given time does not exist in the database, check the /time method to find all the times'})
+
+    for plane in data:
         if 'on_ground' in plane:
             if plane['on_ground']:
                 on_ground += 1
@@ -199,10 +217,11 @@ def count_flights():
         else:
             unknown += 1
 
-    return jsonify({"airborne": airborne,  "on_ground": on_ground, 'unknown': unknown}), 200
+    return jsonify({"airborne": airborne, "on_ground": on_ground, 'unknown': unknown}), 200
 
-@app.route('/jobs', methods = ['POST'])
-def create_job() -> json:
+
+@app.route('/jobs/<hour>', methods=['POST'])
+def create_job(hour: str) -> json:
     """
     Creates a job with altitude range information (min_altitude, max_altitude) to be processed
     :return: Json string stating if request was successful or not
@@ -213,12 +232,13 @@ def create_job() -> json:
             "error": "Missing required parameters: min_altitude and max_altitude"
         }), 400
 
-    job_dict = add_job(request_data["min_altitude"], request_data["max_altitude"])
+    job_dict = add_job(request_data["min_altitude"], request_data["max_altitude"], hour)
 
     logging.info(str(job_dict))
-    return jsonify({"message": "job successfully created", "id": job_dict["id"]}), 200 ###CHANGED?
+    return jsonify({"message": "job successfully created", "id": job_dict["id"]}), 200  ###CHANGED?
 
-@app.route('/jobs', methods = ['GET'])
+
+@app.route('/jobs', methods=['GET'])
 def list_jobs() -> json:
     """
     Returns a list of all job ids
@@ -235,6 +255,7 @@ def list_jobs() -> json:
     logging.info(f"Number of jobs: {str(count)}")
     return jsonify(id), 200
 
+
 @app.route('/jobs/<jobid>', methods=['GET'])
 def get_job(jobid: str) -> json:
     """
@@ -246,6 +267,7 @@ def get_job(jobid: str) -> json:
     if not job:
         return jsonify({"error": "job id not found"}), 404
     return jsonify(json.loads(job)), 200
+
 
 @app.route('/results-dat/<jobid>', methods=['GET'])
 def get_results_dat(jobid: str) -> json:
@@ -267,6 +289,7 @@ def get_results_dat(jobid: str) -> json:
         return jsonify(json.loads(results.hget(jobid, 'data'))), 200
     else:
         return jsonify({"error": "job status not found"}), 404
+
 
 @app.route('/results-img/<jobid>', methods=['GET'])
 def get_results_image(jobid):
@@ -295,11 +318,6 @@ def get_results_image(jobid):
         return jsonify({"error": "job status not found"}), 404
 
 
-
-
-
-
 if __name__ == '__main__':
     logging.info("Starting Flask app...")
     app.run(host='0.0.0.0', port=5000, debug=True)
-
