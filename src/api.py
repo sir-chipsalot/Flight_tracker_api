@@ -7,6 +7,7 @@ from hotqueue import HotQueue
 import uuid
 import os
 from typing import Dict, List, Union, Any
+from jobs import add_job
 
 redis_host = os.environ.get('REDIS_HOST', 'localhost')
 log_level = os.getenv("LOG_LEVEL", "INFO")
