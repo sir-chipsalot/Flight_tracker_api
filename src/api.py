@@ -178,6 +178,119 @@ def avg_velocity(flight: str, time1: str, time2: str):
 
     
 
+@app.route('/planes/count_flights', methods=['GET'])
+def count_flights():
+    """
+    Determines the number of planes currently in flight, on ground, and unknown
+    """
+    airborne = 0
+    on_ground = 0
+    unknown = 0
+    plane_data = redis_client.get("states")
+    for plane in plane_data:
+        if 'on_ground' in plane:
+            if plane['on_ground']:
+                on_ground += 1
+            else:
+                airborne += 1
+        else:
+            unknown += 1
+
+    return jsonify({"airborne": airborne,  "on_ground": on_ground, 'unknown': unknown}), 200
+
+@app.route('/jobs', methods = ['POST'])
+def create_job() -> json:
+    """
+    Creates a job with altitude range information (min_altitude, max_altitude) to be processed
+    :return: Json string stating if request was successful or not
+    """
+    request_data = request.get_json()
+    if not request_data or "min_altitude" not in request_data or "max_altitude" not in request_data:
+        return jsonify({
+            "error": "Missing required parameters: min_altitude and max_altitude"
+        }), 400
+
+    job_dict = add_job(request_data["min_altitude"], request_data["max_altitude"])
+
+    logging.info(str(job_dict))
+    return jsonify({"message": "job successfully created", "id": job_dict["id"]}), 200 ###CHANGED?
+
+@app.route('/jobs', methods = ['GET'])
+def list_jobs() -> json:
+    """
+    Returns a list of all job ids
+    :return: list of all job ids in json format
+    """
+    id = []
+    count = 0
+    for key in jdb.keys():
+        count += 1
+        data = jdb.get(key)
+        if data:
+            data2 = json.loads(data)
+            id.append(data2.get("id"))
+    logging.info(f"Number of jobs: {str(count)}")
+    return jsonify(id), 200
+
+@app.route('/jobs/<jobid>', methods=['GET'])
+def get_job(jobid: str) -> json:
+    """
+    Returns job information for a specific job given their id
+    :param jobid: The id of the job that user wants information about
+    :return: The information of a specific job in json format
+    """
+    job = jdb.get(jobid)
+    if not job:
+        return jsonify({"error": "job id not found"}), 404
+    return jsonify(json.loads(job)), 200
+
+@app.route('/results-dat/<jobid>', methods=['GET'])
+def get_results_dat(jobid: str) -> json:
+    """
+    Returns the list of planes by icao24 id that are between a certain altitude range
+    :param jobid: The id of the job that user wants information about
+    :return: returns the dictionary of the list of planes by icao24 id that are between a certain longitude and latitude.
+    """
+    job = json.loads(jdb.get(jobid))
+    if not job:
+        logging.error("job id not found")
+        return jsonify({"error": "job id not found"}), 404
+
+    if job['status'] == "submitted":
+        return jsonify({"message": "job not processed yet"}), 200
+    elif job["status"] == "in progress":
+        return jsonify({"message": "job in processing"}), 200
+    elif job["status"] == "complete":
+        return jsonify(json.loads(results.hget(jobid, 'data'))), 200
+    else:
+        return jsonify({"error": "job status not found"}), 404
+
+@app.route('/results-img/<jobid>', methods=['GET'])
+def get_results_image(jobid):
+    """
+    Returns the generated image of planes between a specified altitude range
+    :param jobid: The id of the job that user wants information about
+    :return: returns the image file corresponding to the requested job or a message about the job's status.
+    """
+    job = json.loads(jdb.get(jobid))
+    if not job:
+        logging.error("job id not found")
+        return jsonify({"error": "job id not found"}), 404
+
+    if job['status'] == "submitted":
+        return jsonify({"message": "job not processed yet"}), 200
+    elif job["status"] == "in progress":
+        return jsonify({"message": "job in processing"}), 200
+    elif job["status"] == "complete":
+        image_data = results.hget(jobid, 'image')
+        path = f'/app/{jobid}.png'
+        if isinstance(image_data, str):
+            image_data = bytes.fromhex(image_data)
+        with open(path, 'wb') as f:
+            f.write(image_data)
+    else:
+        return jsonify({"error": "job status not found"}), 404
+
 
 
 
