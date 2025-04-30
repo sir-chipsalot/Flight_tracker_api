@@ -20,3 +20,29 @@ services:
     environment:
       - REDIS_HOST=redis-db
       - REDIS_PORT=6379
+    command: ["python", "/code/api.py"]
+    
+worker:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    depends_on:
+      - redis-db
+    image: username/ml_flask_app:1.0
+    ports:
+      - 5000:5001
+    environment:
+      - REDIS_HOST=redis-db
+      - LOG_LEVEL=INFO
+    command: ["python", "/code/worker.py"]
+
+  test:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    depends_on:
+      - redis-db
+    image: username/ml_flask_app:1.0
+    environment:
+      - REDIS_HOST=redis-db  
+      - LOG_LEVEL=INFO
