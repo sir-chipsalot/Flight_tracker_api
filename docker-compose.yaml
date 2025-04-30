@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  redis-db:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data:/data
+    command: ["--save", "1", "1"]
+
+  flask:
+    build:
+      context: ./
+      dockerfile: $PWD/Dockerfile
+    depends_on:
+      - redis-db
+    ports:
+      - "5000:5000"
+    environment:
+      - REDIS_HOST=redis-db
+      - REDIS_PORT=6379
