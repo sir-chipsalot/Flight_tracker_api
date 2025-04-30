@@ -63,7 +63,7 @@ def load_data() -> Dict[str, str]:
         logging.info("sucessfully got states")
         if not states:
             logging.warning("No flight states found in fetched data.")
-            return jsonify({'error': 'No flgght states found in the fetched data.'}), 500
+            return jsonify({'error': 'No flight states found in the fetched data.'}), 500
 
         times_db.sadd("times_set", cur_time)
         logging.info(f"Saved timestamp {cur_time} into Redis times_set.")
@@ -100,9 +100,6 @@ def load_data() -> Dict[str, str]:
 
                 flight_list.append(flight_data)
                 redis_client.set(flight_key, json.dumps(flight_data))
-
-                redis_client.set(flight_key, json.dumps(flight_data))
-
                 logging.debug(f"Stored flight {icao24} at {timestamp} in Redis.")
 
             except Exception as e:
@@ -171,7 +168,7 @@ def avg_velocity(flight: str, time1: str, time2: str):
     :param time2: ending timestamp
     :return: avg_velocity of flight between times
     """
-    
+
     flight_key1 = f"flight:{flight}:{time1}"
     flight_key2 = f"flight:{flight}:{time2}"
 
@@ -186,10 +183,10 @@ def avg_velocity(flight: str, time1: str, time2: str):
     data2 = json.loads(redis_client.get(flight_key2))
 
     data1 = data1.get("velocity")
-    logging.INFO(f"sucessfully gotten flight {data1}")
+    logging.info(f"Successfully retrieved flight velocity: {data1}")
     data2 = data2.get("velocity")
-
-    return (data1)
+    avg_v = (data1 + data2) / 2
+    return jsonify({"average velocity": avg_v})
 
 
 @app.route('/planes/count_flights/<hour>', methods=['GET'])
@@ -252,8 +249,9 @@ def list_jobs() -> json:
         if data:
             data2 = json.loads(data)
             id.append(data2.get("id"))
+            
     logging.info(f"Number of jobs: {str(count)}")
-    return jsonify(id), 200
+    return jsonify({"job ids": id}), 200
 
 
 @app.route('/jobs/<jobid>', methods=['GET'])
