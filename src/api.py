@@ -129,7 +129,7 @@ def flights_by_hour(country: str, hour: int):
         hour (int): The Unix timestamp (start of the hour in UTC).
 
     Example call:
-        /flights_by_hour/United States/1745952031
+        /flights_by_hour/United%20States/1745952031
     """
 
     count = 0
@@ -159,7 +159,7 @@ def get_list_of_times():
                     'times': data})
 
 
-@app.route('/avg_velocity_of_flight_between_times/<flight>/<time1>/<time2>', methods=['GET'])
+@app.route('/avg_velocity/<flight>/<time1>/<time2>', methods=['GET'])
 def avg_velocity(flight: str, time1: str, time2: str):
     """
     Compute the average velocity of a flight between two timestamps.
@@ -189,8 +189,8 @@ def avg_velocity(flight: str, time1: str, time2: str):
     return jsonify({"average velocity": avg_v})
 
 
-@app.route('/planes/count_flights/<hour>', methods=['GET'])
-def count_flights(hour: str):
+@app.route('/planes_count_flights/<hour>', methods=['GET'])
+def count_flights(hour: int):
     """
     Determines the number of planes in flight, on ground, and unknown at the given hour
     :param hour: The Unix timestamp (start of the hour in UTC).
@@ -232,7 +232,7 @@ def create_job(hour: str) -> json:
     job_dict = add_job(request_data["min_altitude"], request_data["max_altitude"], hour)
 
     logging.info(str(job_dict))
-    return jsonify({"message": "job successfully created", "id": job_dict["id"]}), 200  ###CHANGED?
+    return jsonify({"message": "job successfully created", "id": job_dict["id"]}), 200
 
 
 @app.route('/jobs', methods=['GET'])
