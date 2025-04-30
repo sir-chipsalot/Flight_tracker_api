@@ -98,6 +98,8 @@ def load_data() -> Dict[str, str]:
 
                 flight_list.append(flight_data)
                 redis_client.set(flight_key, json.dumps(flight_data))
+                
+                redis_client.set(flight, json.dumps(flight_data)
 
                 logging.debug(f"Stored flight {icao24} at {timestamp} in Redis.")
 
