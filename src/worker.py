@@ -79,15 +79,18 @@ def do_work(jobid):
 
             min_altitude = job["min_altitude"]
             max_altitude = job["max_altitude"]
-            if min_altitude is None or max_altitude is None:
+            hour = job["hour"]
+            if min_altitude is None or max_altitude is None or time is None:
                 logging.error("Failed to get min and max altitude")
                 job['status'] = 'failed'
+                jdb.set(jobid, json.dumps(job))
             else:
 
-                data = redis_client.get("states")  #CHANGE
+                data = json.loads(redis_client.get(str(hour)))
                 if not data:
                     logging.error("no data found")
                     job['status'] = 'failed'
+                    jdb.set(jobid, json.dumps(job))
                 else:
                     long = []
                     lat = []
