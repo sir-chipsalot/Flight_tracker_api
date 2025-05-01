@@ -80,13 +80,13 @@ def do_work(jobid):
             min_altitude = job["min_altitude"]
             max_altitude = job["max_altitude"]
             hour = job["hour"]
-            if min_altitude is None or max_altitude is None or time is None:
+            if min_altitude is None or max_altitude is None or hour is None:
                 logging.error("Failed to get min and max altitude")
                 job['status'] = 'failed'
                 jdb.set(jobid, json.dumps(job))
             else:
 
-                data = json.loads(redis_client.get(str(hour)))
+                data = redis_client.get(str(hour))
                 if not data:
                     logging.error("no data found")
                     job['status'] = 'failed'
@@ -98,10 +98,10 @@ def do_work(jobid):
                     dataset = []
                     for plane in json.loads(data):
                         if "longitude" in plane:
-                            if plane["altitude"] and plane["latitude"] and plane["longitude"] and min_altitude <= plane["altitude"] <= max_altitude:
+                            if plane["geo_altitude"] and plane["latitude"] and plane["longitude"] and min_altitude <= plane["geo_altitude"] <= max_altitude:
                                 lat.append(plane.get("latitude"))
                                 long.append(plane.get("longitude"))
-                                alt.append(plane["altitude"])
+                                alt.append(plane["geo_altitude"])
                                 if plane["icao24"]:
                                     dataset.append(plane["icao24"])
 
@@ -116,7 +116,7 @@ def do_work(jobid):
                         logging.info("No planes within the specified altitude")
 
                     time.sleep(5)
-
+                    logging.info(f"Job, {jobid}, processing complete")
                     job['status'] = 'complete'
                     job['result'] = dataset
                     jdb.set(jobid, json.dumps(job))
