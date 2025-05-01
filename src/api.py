@@ -18,7 +18,7 @@ app = Flask(__name__)
 redis_client = redis.Redis(host=redis_host, port=6379, db=0, decode_responses=True)
 q = HotQueue("queue", host=redis_host, port=6379, db=1, decode_responses=True)
 jdb = redis.Redis(host=redis_host, port=6379, db=2, decode_responses=True)
-results = redis.Redis(host=redis_host, port=6379, db=3, decode_responses=True)
+results = redis.Redis(host=redis_host, port=6379, db=3, decode_responses=False)
 times_db = redis.Redis(host=redis_host, port=6379, db=4, decode_responses=True)
 
 fly_url = "https://opensky-network.org/api/states/all"
@@ -118,6 +118,20 @@ def load_data() -> Dict[str, str]:
         logging.error(f"Error in load_data: {e}")
         return {'error': f'An unexpected error occurred: {str(e)}'}
 
+@app.route('/data/<int:hour>', methods = ['DELETE'])
+def delete_data(hour: int) -> json:
+    """
+    Deletes all data under the specified hour from the redis container
+    :return: message detailing whether storage was successful or not
+    """
+    data = redis_client.get(str(hour))
+    if not data:
+        logging.error("Failed to get data")
+        return jsonify({"error": "Failed to get data"}), 400
+
+    redis_client.delete(str(hour))
+    return jsonify({"message": f"deleted data at time {hour} from Redis"}), 200
+
 
 @app.route('/flights_by_hour/<country>/<int:hour>', methods=['GET'])
 def flights_by_hour(country: str, hour: int):
@@ -129,7 +143,7 @@ def flights_by_hour(country: str, hour: int):
         hour (int): The Unix timestamp (start of the hour in UTC).
 
     Example call:
-        /flights_by_hour/United%20States/1745952031
+        /flights_by_hour/United States/1745952031
     """
 
     count = 0
@@ -155,11 +169,11 @@ def get_list_of_times():
     """
 
     data = list(times_db.smembers("times_set"))
-    return jsonify({'message': 'The ese are the list of times you can choose from',
+    return jsonify({'message': 'These are the list of times you can choose from',
                     'times': data})
 
 
-@app.route('/avg_velocity/<flight>/<time1>/<time2>', methods=['GET'])
+@app.route('/avg_velocity_of_flight_between_times/<flight>/<time1>/<time2>', methods=['GET'])
 def avg_velocity(flight: str, time1: str, time2: str):
     """
     Compute the average velocity of a flight between two timestamps.
@@ -189,7 +203,7 @@ def avg_velocity(flight: str, time1: str, time2: str):
     return jsonify({"average velocity": avg_v})
 
 
-@app.route('/planes_count_flights/<hour>', methods=['GET'])
+@app.route('/count_flights/<int:hour>', methods=['GET'])
 def count_flights(hour: int):
     """
     Determines the number of planes in flight, on ground, and unknown at the given hour
@@ -217,8 +231,8 @@ def count_flights(hour: int):
     return jsonify({"airborne": airborne, "on_ground": on_ground, 'unknown': unknown}), 200
 
 
-@app.route('/jobs/<hour>', methods=['POST'])
-def create_job(hour: str) -> json:
+@app.route('/jobs/<int:hour>', methods=['POST'])
+def create_job(hour: int) -> json:
     """
     Creates a job with altitude range information (min_altitude, max_altitude) to be processed
     :return: Json string stating if request was successful or not
@@ -232,7 +246,7 @@ def create_job(hour: str) -> json:
     job_dict = add_job(request_data["min_altitude"], request_data["max_altitude"], hour)
 
     logging.info(str(job_dict))
-    return jsonify({"message": "job successfully created", "id": job_dict["id"]}), 200
+    return jsonify({"message": "job successfully created", "id": job_dict["id"]}), 200  ###CHANGED?
 
 
 @app.route('/jobs', methods=['GET'])
@@ -249,7 +263,7 @@ def list_jobs() -> json:
         if data:
             data2 = json.loads(data)
             id.append(data2.get("id"))
-            
+
     logging.info(f"Number of jobs: {str(count)}")
     return jsonify({"job ids": id}), 200
 
@@ -274,11 +288,11 @@ def get_results_dat(jobid: str) -> json:
     :param jobid: The id of the job that user wants information about
     :return: returns the dictionary of the list of planes by icao24 id that are between a certain longitude and latitude.
     """
-    job = json.loads(jdb.get(jobid))
+    job = jdb.get(jobid)
     if not job:
         logging.error("job id not found")
         return jsonify({"error": "job id not found"}), 404
-
+    job = json.loads(job)
     if job['status'] == "submitted":
         return jsonify({"message": "job not processed yet"}), 200
     elif job["status"] == "in progress":
@@ -296,22 +310,24 @@ def get_results_image(jobid):
     :param jobid: The id of the job that user wants information about
     :return: returns the image file corresponding to the requested job or a message about the job's status.
     """
-    job = json.loads(jdb.get(jobid))
+    job = jdb.get(jobid)
     if not job:
         logging.error("job id not found")
         return jsonify({"error": "job id not found"}), 404
-
+    job = json.loads(job)
     if job['status'] == "submitted":
         return jsonify({"message": "job not processed yet"}), 200
     elif job["status"] == "in progress":
         return jsonify({"message": "job in processing"}), 200
     elif job["status"] == "complete":
         image_data = results.hget(jobid, 'image')
+        if image_data is None:
+            return jsonify({"error": "image not found"}), 404
+
         path = f'/app/{jobid}.png'
-        if isinstance(image_data, str):
-            image_data = bytes.fromhex(image_data)
         with open(path, 'wb') as f:
             f.write(image_data)
+        return send_file(path, mimetype='image/png')
     else:
         return jsonify({"error": "job status not found"}), 404
 
