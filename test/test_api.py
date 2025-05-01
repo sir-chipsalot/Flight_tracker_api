@@ -77,3 +77,9 @@ def test_get_results_img():
     ids = response.json()['id']
     response = requests.get(f"http://127.0.0.1:5000/results-img/{ids}")
     assert response.status_code == 200
+
+def test_delete_data():
+    response = requests.delete("http://127.0.0.1:5000/data")
+    assert response.status_code == 200
+    #repopulate data in case it becomes empty
+    response = requests.post("http://127.0.0.1:5000/data")
