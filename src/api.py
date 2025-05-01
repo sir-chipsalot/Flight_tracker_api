@@ -121,8 +121,8 @@ def load_data() -> Dict[str, str]:
 @app.route('/data/<int:hour>', methods = ['DELETE'])
 def delete_data(hour: int) -> json:
     """
-    Deletes all data under the specified hour from the redis container
-    :return: message detailing whether storage was successful or not
+    Deletes all data under the specified hour
+    :return: message saying whether was successful or not
     """
     data = redis_client.get(str(hour))
     if not data:
@@ -130,6 +130,7 @@ def delete_data(hour: int) -> json:
         return jsonify({"error": "Failed to get data"}), 400
 
     redis_client.delete(str(hour))
+    times_db.srem("times_set", str(hour))
     return jsonify({"message": f"deleted data at time {hour} from Redis"}), 200
 
 
