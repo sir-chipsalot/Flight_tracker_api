@@ -174,15 +174,66 @@ def get_list_of_times():
                     'times': data})
 
 
-@app.route('/avg_velocity_of_flight_between_times/<flight>/<time1>/<time2>', methods=['GET'])
+
+@app.route('/flights_at_time/<time>', methods=['GET'])
+def get_flights_at_time(time: str):
+    """
+    Get all flight ICAO24 codes for a specific timestamp.
+    
+    Args:
+        time (str): The Unix timestamp (start of the hour in UTC).
+    
+    Returns:
+        JSON response with either:
+        - List of ICAO24 codes at the given time
+        - Error message if time doesn't exist
+    """
+    # Check if timestamp exists
+    if not times_db.sismember("times_set", time):
+        return jsonify({
+            "error": f"Timestamp {time} not found",
+            "available_times": list(times_db.smembers("times_set"))
+        }), 404
+
+    # Get flight data
+    flights_data = redis_client.get(time)
+    if not flights_data:
+        return jsonify({"error": f"No flight data found for timestamp {time}"}), 404
+
+    try:
+        flights_list = json.loads(flights_data)
+        icao_list = [flight.get("icao24") for flight in flights_list if flight.get("icao24")]
+        
+        return jsonify({
+            "timestamp": time,
+            "icao24_codes": icao_list
+        })
+        
+    except json.JSONDecodeError:
+        return jsonify({"error": "Invalid flight data format"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
+
+@app.route('/avg_velocity/<flight>/<time1>/<time2>', methods=['GET'])
 def avg_velocity(flight: str, time1: str, time2: str):
     """
     Compute the average velocity of a flight between two timestamps.
     :param flight: icao24 flight name
     :param time1: starting timestamp
     :param time2: ending timestamp
-    :return: avg_velocity of flight between times
+    :return: avg_velocity of flight between times or error message
     """
+    # First check if the timestamps exist in our database
+    if not times_db.sismember("times_set", time1):
+        logging.error(f"Timestamp {time1} not found in database")
+        return jsonify({"error": f"Timestamp {time1} not found in database"}), 404
+
+    if not times_db.sismember("times_set", time2):
+        logging.error(f"Timestamp {time2} not found in database")
+        return jsonify({"error": f"Timestamp {time2} not found in database"}), 404
 
     flight_key1 = f"flight:{flight}:{time1}"
     flight_key2 = f"flight:{flight}:{time2}"
@@ -190,19 +241,42 @@ def avg_velocity(flight: str, time1: str, time2: str):
     raw_data1 = redis_client.get(flight_key1)
     raw_data2 = redis_client.get(flight_key2)
 
-    if raw_data1 is None or raw_data2 is None:
-        logging.error(f"Missing data: {flight_key1} or {flight_key2}")
-        return {"error": "One or both keys are missing in Redis"}, 404
+    if raw_data1 is None:
+        logging.error(f"Flight {flight} not found at timestamp {time1}")
+        return jsonify({"error": f"Flight {flight} not found at timestamp {time1}"}), 404
 
-    data1 = json.loads(redis_client.get(flight_key1))
-    data2 = json.loads(redis_client.get(flight_key2))
+    if raw_data2 is None:
+        logging.error(f"Flight {flight} not found at timestamp {time2}")
+        return jsonify({"error": f"Flight {flight} not found at timestamp {time2}"}), 404
 
-    data1 = data1.get("velocity")
-    logging.info(f"Successfully retrieved flight velocity: {data1}")
-    data2 = data2.get("velocity")
-    avg_v = (data1 + data2) / 2
-    return jsonify({"average velocity": avg_v})
+    try:
+        data1 = json.loads(raw_data1)
+        data2 = json.loads(raw_data2)
 
+        velocity1 = data1.get("velocity")
+        velocity2 = data2.get("velocity")
+
+        if velocity1 is None or velocity2 is None:
+            logging.error("Velocity data missing for one or both timestamps")
+            return jsonify({"error": "Velocity data missing for one or both timestamps"}), 400
+
+        avg_v = (float(velocity1) + float(velocity2)) / 2
+        logging.info(f"Successfully calculated average velocity: {avg_v}")
+
+        return jsonify({
+            "flight": flight,
+            "time1": time1,
+            "time2": time2,
+            "average_velocity": avg_v,
+            "units": "m/s"
+        })
+
+    except (ValueError, TypeError) as e:
+        logging.error(f"Error processing velocity data: {e}")
+        return jsonify({"error": "Invalid velocity data format"}), 400
+    except Exception as e:
+        logging.error(f"Unexpected error: {e}")
+        return jsonify({"error": "An unexpected error occurred"}), 500
 
 @app.route('/count_flights/<int:hour>', methods=['GET'])
 def count_flights(hour: int):
@@ -332,6 +406,30 @@ def get_results_image(jobid):
     else:
         return jsonify({"error": "job status not found"}), 404
 
+@app.route('/help', methods=['GET'])
+def help():
+    """
+    Provides documentation for all available API endpoints.
+    Returns:
+        JSON with all endpoints and their descriptions
+    """
+    endpoints = {
+        'POST /data': 'Load flight data from OpenSky API into Redis',
+        'DELETE /data/<hour>': 'Delete all flight data for a specific hour',
+        'GET /flights_by_hour/<country>/<hour>': 'Get the number of flights from a specific country during a specific hour',
+        'GET /time': 'Get all available timestamps in the database',
+        'GET /avg_velocity/<flight>/<time1>/<time2>': 'Compute average velocity of a flight between two timestamps',
+        'GET /count_flights/<hour>': 'Count flights by status (airborne, on ground, unknown) for a specific hour',
+        'POST /jobs/<hour>': 'Create a job to find flights within an altitude range for a specific hour (requires min_altitude and max_altitude in JSON body)',
+        'GET /jobs': 'List all job IDs',
+        'GET /jobs/<jobid>': 'Get information about a specific job',
+        'GET /results-dat/<jobid>': 'Get results data for a completed job (list of flights in altitude range)',
+        'GET /results-img/<jobid>': 'Get results image for a completed job (visualization of flights in altitude range)',
+        'GET /flights_at_time/<time>': 'Get all the flights at a specific time',
+        'GET /help': 'This help message - lists all available endpoints',
+        'DELETE /delete_all': 'WARNING: Deletes ALL data from Redis (all databases)'
+    }
+    return jsonify(endpoints)
 
 if __name__ == '__main__':
     logging.info("Starting Flask app...")
