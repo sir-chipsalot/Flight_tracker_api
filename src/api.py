@@ -420,8 +420,7 @@ def help():
         'GET /time': 'Get all available timestamps in the database',
         'GET /avg_velocity/<flight>/<time1>/<time2>': 'Compute average velocity of a flight between two timestamps',
         'GET /count_flights/<hour>': 'Count flights by status (airborne, on ground, unknown) for a specific hour',
-        'POST /jobs/<hour>': 'Create a job to find flights within an altitude range for a specific hour (requires min_altitude and max_altitude in JSON body)
-        example comand: curl -X POST http://127.0.0.1:5000/jobs/<hour> -H "Content-Type: application/json" -d '{"min_altitude":10000, "max_altitude":12000}' ',
+        'POST /jobs/<hour>': '''Create a job to find flights within an altitude range for a specific hour (requires min_altitude and max_altitude in JSON body) example comand: curl -X POST http://127.0.0.1:5000/jobs/<hour> -H "Content-Type: application/json" -d '{"min_altitude":10000, "max_altitude":12000}' ''',
         'GET /jobs': 'List all job IDs',
         'GET /jobs/<jobid>': 'Get information about a specific job',
         'GET /results-dat/<jobid>': 'Get results data for a completed job (list of flights in altitude range)',
