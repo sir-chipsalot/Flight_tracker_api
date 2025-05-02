@@ -161,6 +161,22 @@ def flights_by_hour(country: str, hour: int):
     return jsonify({'message': 'all the data has been counted',
                     f'total number of flights that left from {country}': count})
 
+@app.route('/delete_all', methods=['DELETE'])
+def delete() -> json:
+    """
+    Delete all HGNC gene data from Redis.
+
+    Returns:
+        Dict[str, str]: A message indicating success or failure.
+    """
+    try:
+        data = list(times_db.smembers("times_set"))
+        for time in data:
+            redis_client.delete(time)
+        return {'message': 'Data deleted successfully'}
+    except Exception as e:
+        logging.error(f"Error deleting data: {e}")
+        return {'error': f'An error occurred while deleting data: {str(e)}'}
 
 @app.route('/time', methods=['GET'])
 def get_list_of_times():
