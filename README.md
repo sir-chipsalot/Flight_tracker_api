@@ -1,4 +1,5 @@
 # OpenSky Flight Data API
+## Organize instructions for local/Kubernetes usage
 
 ## Introduction
 This project provides a Flask-based API that ingests real-time aviation data from the [OpenSky Network API](https://openskynetwork.github.io/opensky-api/rest.html#all-state-vectors), stores the information in a Redis database, and enables querying, filtering, and job-based processing of flight data. It also supports visualization of aircraft positions within altitude ranges using background workers and geospatial mapping.
@@ -179,6 +180,7 @@ This README was organized and improved using AI (ChatGPT) to assist in clarity, 
 ## References
 - [OpenSky Network](https://opensky-network.org/)
 - [OpenSky API Docs](https://openskynetwork.github.io/opensky-api/)
+- [COE332 ReadTheDocs](https://coe-332-sp25.readthedocs.io/en/latest/index.html)
 - [Cartopy Projections Reference](https://scitools.org.uk/cartopy/docs/latest/reference/projections.html#cartopy-projections)
 - [Matplotlib Color Maps](https://matplotlib.org/stable/users/explain/colors/colormaps.html)
 - [Matplotlib Scatter Plot](https://www.w3schools.com/python/matplotlib_scatter.asp)
