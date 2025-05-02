@@ -49,7 +49,7 @@ This is the main application file that defines all the Flask API routes and logi
 
 - **delete_data(hour: int)**: Deletes all flight data stored in Redis under the specified hour timestamp and removes the timestamp from the tracked set.
 
-- **delete_data()**: Deletes all data stored in Redis for all timestamps. 
+- **delete()**: Deletes all data stored in Redis for all timestamps. 
 
 - **flights_by_hour(country: str, hour: int)**: Returns the total number of flights originating from a given country for the specified timestamp.
 
