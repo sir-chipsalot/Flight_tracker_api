@@ -21,5 +21,7 @@ spec:
           env:
             - name: REDIS_HOST
               value: redis-db
+            - name: REDIS_PORT
+              value: "6379"
             - name: LOG_LEVEL
               value: INFO
