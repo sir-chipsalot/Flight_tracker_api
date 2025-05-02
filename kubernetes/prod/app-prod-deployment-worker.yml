@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-prod
+  labels:
+    app: worker-prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker-prod
+  template:
+    metadata:
+      labels:
+        app: worker-prod
+    spec:
+      containers:
+        - name: worker-prod
+          image: ssinghal37/ml_flask_app:1.0
+          command: ["python", "worker.py"]
+          env:
+            - name: REDIS_HOST
+              value: redis-db-prod
+            - name: REDIS_PORT
+              value: "6379"
+            - name: LOG_LEVEL
+              value: INFO
