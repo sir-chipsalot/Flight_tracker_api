@@ -90,6 +90,9 @@ This is the main application file that defines all the Flask API routes and logi
 
 - **GET /results-img/<jobid>**: Returns a PNG image visualizing planes within the specified altitude range from a completed job.
 
+- **GET /help**: Returns a list of the Flask routes and general description of the routes.
+
+
 ### `jobs.py`
 The `jobs.py` file contains functionality related to job creation and management. This file was copied from the class notes and handles various job-related operations.
 
