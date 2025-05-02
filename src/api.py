@@ -416,6 +416,7 @@ def help():
     endpoints = {
         'POST /data': 'Load flight data from OpenSky API into Redis',
         'DELETE /data/<hour>': 'Delete all flight data for a specific hour',
+        'DELETE /delete_all': 'Delete Deletes all stored flight data from Redis for all timestamps.',
         'GET /flights_by_hour/<country>/<hour>': 'Get the number of flights from a specific country during a specific hour',
         'GET /time': 'Get all available timestamps in the database',
         'GET /avg_velocity/<flight>/<time1>/<time2>': 'Compute average velocity of a flight between two timestamps',
