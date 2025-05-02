@@ -427,7 +427,6 @@ def help():
         'GET /results-img/<jobid>': 'Get results image for a completed job (visualization of flights in altitude range)',
         'GET /flights_at_time/<time>': 'Get all the flights at a specific time',
         'GET /help': 'This help message - lists all available endpoints',
-        'DELETE /delete_all': 'WARNING: Deletes ALL data from Redis (all databases)'
     }
     return jsonify(endpoints)
 
