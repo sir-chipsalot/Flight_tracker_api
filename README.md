@@ -49,6 +49,8 @@ This is the main application file that defines all the Flask API routes and logi
 
 - **delete_data(hour: int)**: Deletes all flight data stored in Redis under the specified hour timestamp and removes the timestamp from the tracked set.
 
+- **delete_data()**: Deletes all data stored in Redis for all timestamps. 
+
 - **flights_by_hour(country: str, hour: int)**: Returns the total number of flights originating from a given country for the specified timestamp.
 
 - **get_list_of_times()**: Retrieves and returns all timestamps stored in Redis under the "times_set" key.
@@ -71,6 +73,8 @@ This is the main application file that defines all the Flask API routes and logi
 - **POST /data**: Fetches real-time flight data from the OpenSky API and stores it in Redis by timestamp.
 
 - **DELETE /data/<int:hour>**: Deletes all stored flight data from Redis for the specified timestamp.
+
+- **DELETE /delete_all**: Deletes all stored flight data from Redis for all timestamps.
 
 - **GET /flights_by_hour/<country>/<int:hour>**: Returns the number of flights from a given country recorded at a specified timestamp.
 
@@ -118,6 +122,11 @@ curl -X POST http://127.0.0.1:5000/data
 ### Remove flight data for a specific timestamp from Redis:
 ```bash
 curl -X DELETE http://127.0.0.1:5000/data/<hour>
+```
+
+### Remove flight data for all timestamps from Redis:
+```bash
+curl -X DELETE http://127.0.0.1:5000/delete_all
 ```
 
 ### Retrieve list of available timestamps stored in Redis:
