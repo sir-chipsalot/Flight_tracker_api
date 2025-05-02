@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: redis-db-dep
+  name: redis-db
   labels:
     app: redis-db-app
 spec:
