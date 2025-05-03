@@ -15,25 +15,86 @@ This project uses the following dependencies:
 
 All dependencies can be found in `requirements.txt`.
 
-## Instructions
+## Local Deployment (Jetstream VM)
 ### 1. Build and Start the Containerized Environment
 ```bash
 docker-compose up --build -d
 ```
 
-### 2. Run Redis Connection
+### 2. Run tests
 ```bash
-docker exec -it <redis-container-id> redis-cli
+pytest test/
 ```
 
-### 3. Stop the Environment
+### 3. Viewing Worker Logs
+```bash
+docker-compose logs worker
+```
+
+### 4. Stop the Environment
 ```bash
 docker-compose down
 ```
-
-### 4. Viewing Worker Logs
+## Kubernetes Deployment
+### 1. Apply manifests
 ```bash
-docker-compose logs worker
+kubectl apply -f kubernetes/test/
+```
+### 2. Port-forwarding
+```bash
+kubectl port-forward svc/flask-nodeport-svc 5000:5000
+```
+Ensure you do this in another tab
+
+### 3. Checks
+```bash
+kubectl get pods
+kubectl get svc
+kubectl get pvc
+kubectl logs <pod_name>
+```
+
+### 4. Tests
+```bash
+curl http://localhost:5000/<endpoint>
+```
+Reference API usage below for endpoints and examples
+
+### Stop the Environment
+```bash
+kubectl delete -f kubernetes/test/
+```
+
+## Using the Application Locally (Jetstream VM)
+Once port-forward has been initiated, access via
+```bash
+curl http://localhost:5000/<endpoint>
+```
+
+## Kubernetes Public Access
+### 1. Apply manifests
+```bash
+kubectl apply -f kubernetes/prod/
+```
+
+### 2. Checks
+```bash
+kubectl get pods
+kubectl get svc
+kubectl get pvc
+kubectl logs <pod_name>
+```
+
+### 3. Tests
+```bash
+curl flight-api.coe332.tacc.cloud/<endpoint>
+```
+flight-api.coe332.tacc.cloud is our public web address, and endpoints (with GET method) can be accessed through a web browser as well
+Reference API usage below for endpoints and examples
+
+### 4. Stop the Environment
+```bash
+kubectl delete -f kubernetes/prod/
 ```
 
 ## File Descriptions
