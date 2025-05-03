@@ -185,6 +185,8 @@ pytest test/test_worker.py
 ![System Diagram](diagram.png)
 
 ### Diagram Overview
+This diagram outlines the architecture and data flow of a docker containerized system designed for flight tracking and analysis. The application uses Flask for its web interface, Redis for data storage and queuing, and Kubernetes for orchestration.
+The standard data pipeline is a Post method to load the data. The data is then stored in redis and can be used for future queries. From there a user can create a job that is linked into the jobs.py module. That Job is then sent into the queue databse. From there, the worker looks at the queue, gets the data related to the job, processes the data, and the sends it into a results database. After that, the User can call specific curl commands to see the result. This docker image, is pushed into kubernetes, for modularization, scalabitlity, and efficiency.
 
 ## Acknowledgments and AI Use
 This README was organized and improved using AI (ChatGPT) to assist in clarity, formatting, and completeness. The core codebase, except for `jobs.py` which was adapted from course materials, was written by the project authors.
