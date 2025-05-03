@@ -173,6 +173,7 @@ def delete() -> json:
         data = list(times_db.smembers("times_set"))
         for time in data:
             redis_client.delete(time)
+            times_db.srem("times_set", time)
         return {'message': 'Data deleted successfully'}
     except Exception as e:
         logging.error(f"Error deleting data: {e}")
